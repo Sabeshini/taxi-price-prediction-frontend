@@ -1,35 +1,31 @@
-import React, { useState } from "react";
-import axios from "axios";
+import { useState } from "react";
 
-const App = () => {
-  const [distance, setDistance] = useState("");
-  const [price, setPrice] = useState(null);
+function App() {
+    const [fare, setFare] = useState(null);
+    const [city1, setCity1] = useState("");
+    const [city2, setCity2] = useState("");
 
-  const fetchPrice = async () => {
-    try {
-      const response = await axios.post("https://taxi-backend.onrender.com/predict", {
-        distance: parseFloat(distance),
-      });
-      setPrice(response.data.price);
-    } catch (error) {
-      console.error("Error fetching price:", error);
-      alert("Failed to fetch price. Check backend deployment.");
-    }
-  };
+    const getFare = () => {
+        fetch("https://taxi-price-prediction-backend.onrender.com/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ city1, city2 })
+        })
+        .then(response => response.json())
+        .then(data => setFare(data.estimated_fare))
+        .catch(error => console.error("Error:", error));
+    };
 
-  return (
-    <div style={{ textAlign: "center", padding: "50px" }}>
-      <h1>Taxi Price Prediction</h1>
-      <input
-        type="number"
-        placeholder="Enter Distance (km)"
-        value={distance}
-        onChange={(e) => setDistance(e.target.value)}
-      />
-      <button onClick={fetchPrice}>Get Price</button>
-      {price !== null && <h2>Estimated Price: ₹{price}</h2>}
-    </div>
-  );
-};
+    return (
+        <div>
+            <h2>Taxi Price Prediction</h2>
+            <input type="text" placeholder="Enter City 1" value={city1} onChange={(e) => setCity1(e.target.value)} />
+            <input type="text" placeholder="Enter City 2" value={city2} onChange={(e) => setCity2(e.target.value)} />
+            <button onClick={getFare}>Get Fare</button>
+            {fare !== null && <h3>Estimated Fare: ₹{fare}</h3>}
+        </div>
+    );
+}
 
 export default App;
+
