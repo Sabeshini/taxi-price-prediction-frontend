@@ -1,56 +1,69 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import "./styles.css";
 import { FaCarSide } from "react-icons/fa";
 import { motion } from "framer-motion";
 
-function App() {
-    const [fare, setFare] = useState(null);
-    const [city1, setCity1] = useState("");
-    const [city2, setCity2] = useState("");
+const App = () => {
+  const [city1, setCity1] = useState("");
+  const [city2, setCity2] = useState("");
+  const [fare, setFare] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-    const getFare = () => {
-        fetch("https://taxi-price-prediction-backend.onrender.com/predict", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ city1, city2 })
-        })
-        .then(response => response.json())
-        .then(data => setFare(data.estimated_fare))
-        .catch(error => console.error("Error:", error));
-    };
+  const fetchFare = async () => {
+    if (!city1.trim() || !city2.trim()) {
+      setError("Both city fields are required.");
+      return;
+    }
+    setError("");
+    setLoading(true);
+    setFare(null);
 
-    return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-            <motion.div className="bg-white shadow-lg rounded-2xl p-8 w-full max-w-md"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}>
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center justify-center mb-4">
-                    <FaCarSide className="text-yellow-500 mr-2" /> Taxi Price Predictor
-                </h2>
-                <div className="flex flex-col gap-4">
-                    <input type="text" placeholder="Enter City 1" value={city1} 
-                        onChange={(e) => setCity1(e.target.value)}
-                        className="p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500" />
-                    <input type="text" placeholder="Enter City 2" value={city2} 
-                        onChange={(e) => setCity2(e.target.value)}
-                        className="p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500" />
-                    <motion.button onClick={getFare} 
-                        whileHover={{ scale: 1.1 }}
-                        className="bg-yellow-500 text-white py-2 px-4 rounded-lg font-semibold shadow-md">
-                        Get Fare
-                    </motion.button>
-                </div>
-                {fare !== null && (
-                    <motion.h3 className="mt-4 text-xl font-semibold text-gray-700" 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }}>
-                        Estimated Fare: ₹{fare}
-                    </motion.h3>
-                )}
-            </motion.div>
-        </div>
-    );
-}
+    try {
+      const response = await fetch("https://taxi-price-prediction-backend.onrender.com/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ city1, city2 }),
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch fare");
+
+      const data = await response.json();
+      setFare(data.estimated_fare);
+    } catch (error) {
+      setError("Error fetching fare. Try again.");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="container">
+      <motion.h1 initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}>
+        Taxi Price Prediction
+      </motion.h1>
+
+      <div className="input-container">
+        <input type="text" placeholder="Enter City 1" value={city1} onChange={(e) => setCity1(e.target.value)} />
+        <input type="text" placeholder="Enter City 2" value={city2} onChange={(e) => setCity2(e.target.value)} />
+        <button onClick={fetchFare} disabled={loading}>
+          {loading ? "Calculating..." : "Get Fare"}
+        </button>
+      </div>
+
+      {error && <p className="error">{error}</p>}
+
+      {fare !== null && (
+        <motion.div className="result" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+          <FaCarSide className="car-icon" />
+          <h2>Estimated Fare: ₹{fare}</h2>
+        </motion.div>
+      )}
+    </div>
+  );
+};
 
 export default App;
+
 
