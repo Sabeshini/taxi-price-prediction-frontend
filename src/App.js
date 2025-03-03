@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import "./styles.css";
 import { FaCarSide } from "react-icons/fa";
 import { motion } from "framer-motion";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 
 const App = () => {
   const [city1, setCity1] = useState("");
@@ -9,6 +11,8 @@ const App = () => {
   const [fare, setFare] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [city1Coords, setCity1Coords] = useState(null);
+  const [city2Coords, setCity2Coords] = useState(null);
 
   const fetchFare = async () => {
     if (!city1.trim() || !city2.trim()) {
@@ -20,6 +24,7 @@ const App = () => {
     setFare(null);
 
     try {
+      // Fetch fare from backend
       const response = await fetch("https://taxi-price-prediction-backend.onrender.com/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -27,11 +32,32 @@ const App = () => {
       });
 
       if (!response.ok) throw new Error("Failed to fetch fare");
-
       const data = await response.json();
       setFare(data.estimated_fare);
+
+      // Fetch coordinates for the cities
+      const city1Res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${city1}`);
+      const city2Res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${city2}`);
+
+      const city1Data = await city1Res.json();
+      const city2Data = await city2Res.json();
+
+      if (city1Data.length === 0 || city2Data.length === 0) {
+        setError("Could not find one or both cities on the map.");
+        return;
+      }
+
+      setCity1Coords({
+        lat: parseFloat(city1Data[0].lat),
+        lon: parseFloat(city1Data[0].lon),
+      });
+
+      setCity2Coords({
+        lat: parseFloat(city2Data[0].lat),
+        lon: parseFloat(city2Data[0].lon),
+      });
     } catch (error) {
-      setError("Error fetching fare. Try again.");
+      setError("Error fetching fare or location data. Try again.");
       console.error(error);
     } finally {
       setLoading(false);
@@ -60,10 +86,28 @@ const App = () => {
           <h2>Estimated Fare: ₹{fare}</h2>
         </motion.div>
       )}
+
+      {/* Map Section */}
+      {city1Coords && city2Coords && (
+        <MapContainer
+          center={[city1Coords.lat, city1Coords.lon]}
+          zoom={6}
+          style={{ height: "400px", width: "100%", marginTop: "20px", borderRadius: "10px" }}
+        >
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <Marker position={[city1Coords.lat, city1Coords.lon]}>
+            <Popup>{city1}</Popup>
+          </Marker>
+          <Marker position={[city2Coords.lat, city2Coords.lon]}>
+            <Popup>{city2}</Popup>
+          </Marker>
+        </MapContainer>
+      )}
     </div>
   );
 };
 
 export default App;
+
 
 

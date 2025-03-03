@@ -63,3 +63,46 @@ button:hover {
     color: #007bff;
     margin-bottom: 10px;
 }
+
+.container {
+    text-align: center;
+    padding: 20px;
+}
+
+.input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+button {
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.result {
+    margin-top: 20px;
+    font-size: 20px;
+}
+
+.car-icon {
+    font-size: 40px;
+    color: #007bff;
+    margin-bottom: 10px;
+}
+
+.error {
+    color: red;
+    font-size: 14px;
+}
+
+.leaflet-container {
+    height: 400px;
+    width: 100%;
+    border-radius: 10px;
+}
