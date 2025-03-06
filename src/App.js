@@ -1,5 +1,50 @@
 import React, { useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import React, { useState } from "react";
+
+const LocationSearch = () => {
+    const [query, setQuery] = useState("");
+    const [suggestions, setSuggestions] = useState([]);
+
+    const handleInputChange = async (event) => {
+        const value = event.target.value;
+        setQuery(value);
+
+        if (value.length > 1) { // Start searching after 2 characters
+            try {
+                const response = await fetch(`http://127.0.0.1:5000/autocomplete?query=${value}`);
+                const data = await response.json();
+                setSuggestions(data);
+            } catch (error) {
+                console.error("Error fetching location suggestions:", error);
+            }
+        } else {
+            setSuggestions([]);
+        }
+    };
+
+    return (
+        <div>
+            <input
+                type="text"
+                value={query}
+                onChange={handleInputChange}
+                placeholder="Search for a location..."
+            />
+            {suggestions.length > 0 && (
+                <ul>
+                    {suggestions.map((place, index) => (
+                        <li key={index} onClick={() => setQuery(place.name)}>
+                            {place.name}
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
+};
+
+export default LocationSearch;
 
 function App() {
   const [area1, setArea1] = useState("");
