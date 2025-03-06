@@ -1,132 +1,96 @@
 import React, { useState } from "react";
-import "./styles.css";
-import { FaCarSide } from "react-icons/fa";
-import { motion } from "framer-motion";
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import "./App.css";
+
+const LocationInput = ({ label, value, onChange, suggestions, onSelect }) => {
+  return (
+    <div className="input-container">
+      <label>{label}</label>
+      <input
+        type="text"
+        value={value}
+        onChange={onChange}
+        placeholder="Start typing..."
+        className="location-input"
+      />
+      {suggestions.length > 0 && (
+        <ul className="dropdown">
+          {suggestions.map((suggestion, index) => (
+            <li key={index} onClick={() => onSelect(suggestion)}>
+              {suggestion}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
 
 const App = () => {
   const [area1, setArea1] = useState("");
   const [area2, setArea2] = useState("");
+  const [suggestions1, setSuggestions1] = useState([]);
+  const [suggestions2, setSuggestions2] = useState([]);
   const [carType, setCarType] = useState("sedan");
-  const [fare, setFare] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [area1Coords, setArea1Coords] = useState(null);
-  const [area2Coords, setArea2Coords] = useState(null);
-  const [suggestions, setSuggestions] = useState([]);
-  
-  const fetchSuggestions = async (query, setter) => {
-    if (!query) {
+  const [result, setResult] = useState(null);
+
+  const handleInputChange = (value, setArea, setSuggestions) => {
+    setArea(value);
+    if (value.length > 2) {
+      // Fetch suggestions based on input
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${value},Tamil Nadu`)
+        .then((res) => res.json())
+        .then((data) => {
+          setSuggestions(data.map((item) => item.display_name));
+        });
+    } else {
       setSuggestions([]);
-      return;
     }
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}, Tamil Nadu`);
-    const data = await response.json();
-    setter(data.map((place) => place.display_name));
   };
 
-  const fetchFare = async () => {
-    if (!area1.trim() || !area2.trim()) {
-      setError("Both area fields are required.");
-      return;
-    }
-    setError("");
-    setLoading(true);
-    setFare(null);
-
-    try {
-      const response = await fetch("https://taxi-price-prediction-backend.onrender.com/predict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ area1, area2, car_type: carType }),
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch fare");
-      const data = await response.json();
-      setFare(data.estimated_fare);
-
-      const area1Res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${area1}, Chennai`);
-      const area2Res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${area2}, Chennai`);
-      
-      const area1Data = await area1Res.json();
-      const area2Data = await area2Res.json();
-
-      if (area1Data.length === 0 || area2Data.length === 0) {
-        setError("Could not find one or both areas on the map.");
-        return;
-      }
-
-      setArea1Coords({ lat: parseFloat(area1Data[0].lat), lon: parseFloat(area1Data[0].lon) });
-      setArea2Coords({ lat: parseFloat(area2Data[0].lat), lon: parseFloat(area2Data[0].lon) });
-    } catch (error) {
-      setError("Error fetching fare or location data. Try again.");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+  const handleSubmit = async () => {
+    const response = await fetch("http://localhost:5000/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ area1, area2, car_type: carType }),
+    });
+    const data = await response.json();
+    setResult(data);
   };
 
   return (
-    <div className="container">
-      <motion.h1 initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}>
-        Chennai Taxi Price Prediction
-      </motion.h1>
-      
-      <div className="input-container">
-        <input
-          type="text"
-          placeholder="Enter Area 1"
-          value={area1}
-          onChange={(e) => { setArea1(e.target.value); fetchSuggestions(e.target.value, setSuggestions); }}
-        />
-        {suggestions.length > 0 && (
-          <ul className="suggestions">
-            {suggestions.map((s, index) => (
-              <li key={index} onClick={() => { setArea1(s); setSuggestions([]); }}>{s}</li>
-            ))}
-          </ul>
-        )}
-
-        <input
-          type="text"
-          placeholder="Enter Area 2"
-          value={area2}
-          onChange={(e) => { setArea2(e.target.value); fetchSuggestions(e.target.value, setSuggestions); }}
-        />
-        {suggestions.length > 0 && (
-          <ul className="suggestions">
-            {suggestions.map((s, index) => (
-              <li key={index} onClick={() => { setArea2(s); setSuggestions([]); }}>{s}</li>
-            ))}
-          </ul>
-        )}
-
-        <select value={carType} onChange={(e) => setCarType(e.target.value)}>
-          <option value="sedan">Sedan</option>
-          <option value="suv">SUV</option>
-          <option value="hatchback">Hatchback</option>
-        </select>
-        
-        <button onClick={fetchFare} disabled={loading}>{loading ? "Calculating..." : "Get Fare"}</button>
-      </div>
-      
-      {error && <p className="error">{error}</p>}
-      
-      {fare !== null && (
-        <motion.div className="result" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-          <FaCarSide className="car-icon" />
-          <h2>Estimated Fare: ₹{fare}</h2>
-        </motion.div>
-      )}
-      
-      {area1Coords && area2Coords && (
-        <MapContainer center={[area1Coords.lat, area1Coords.lon]} zoom={12} style={{ height: "400px", width: "100%", marginTop: "20px", borderRadius: "10px" }}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <Marker position={[area1Coords.lat, area1Coords.lon]}><Popup>{area1}</Popup></Marker>
-          <Marker position={[area2Coords.lat, area2Coords.lon]}><Popup>{area2}</Popup></Marker>
-          <Polyline positions={[[area1Coords.lat, area1Coords.lon], [area2Coords.lat, area2Coords.lon]]} color="blue" />
-        </MapContainer>
+    <div className="App">
+      <h1>Taxi Fare Estimator</h1>
+      <LocationInput
+        label="Pickup Location"
+        value={area1}
+        onChange={(e) => handleInputChange(e.target.value, setArea1, setSuggestions1)}
+        suggestions={suggestions1}
+        onSelect={(value) => {
+          setArea1(value);
+          setSuggestions1([]);
+        }}
+      />
+      <LocationInput
+        label="Drop-off Location"
+        value={area2}
+        onChange={(e) => handleInputChange(e.target.value, setArea2, setSuggestions2)}
+        suggestions={suggestions2}
+        onSelect={(value) => {
+          setArea2(value);
+          setSuggestions2([]);
+        }}
+      />
+      <select value={carType} onChange={(e) => setCarType(e.target.value)}>
+        <option value="sedan">Sedan</option>
+        <option value="suv">SUV</option>
+        <option value="hatchback">Hatchback</option>
+      </select>
+      <button onClick={handleSubmit}>Get Fare Estimate</button>
+      {result && (
+        <div className="result">
+          <p>Distance: {result.distance_km} km</p>
+          <p>Estimated Fare: ₹{result.estimated_fare}</p>
+        </div>
       )}
     </div>
   );
