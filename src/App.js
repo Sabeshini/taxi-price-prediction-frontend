@@ -4,18 +4,18 @@ import "./App.css";
 const LocationInput = ({ label, value, onChange, suggestions, onSelect }) => {
   return (
     <div className="input-container">
-      <label>{label}</label>
+      <label className="input-label">{label}</label>
       <input
         type="text"
         value={value}
         onChange={onChange}
-        placeholder="Start typing..."
+        placeholder="Enter location..."
         className="location-input"
       />
       {suggestions.length > 0 && (
         <ul className="dropdown">
-          {suggestions.map((suggestion, index) => (
-            <li key={index} onClick={() => onSelect(suggestion)}>
+          {suggestions.slice(0, 3).map((suggestion, index) => (
+            <li key={index} onClick={() => onSelect(suggestion)} className="dropdown-item">
               {suggestion}
             </li>
           ))}
@@ -36,11 +36,10 @@ const App = () => {
   const handleInputChange = (value, setArea, setSuggestions) => {
     setArea(value);
     if (value.length > 2) {
-      // Fetch suggestions based on input
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${value},Tamil Nadu`)
+      fetch(`http://localhost:5000/suggest?q=${value}`)
         .then((res) => res.json())
         .then((data) => {
-          setSuggestions(data.map((item) => item.display_name));
+          setSuggestions(data.slice(0, 3)); // Limit to top 3 suggestions
         });
     } else {
       setSuggestions([]);
@@ -58,36 +57,38 @@ const App = () => {
   };
 
   return (
-    <div className="App">
-      <h1>Taxi Fare Estimator</h1>
-      <LocationInput
-        label="Pickup Location"
-        value={area1}
-        onChange={(e) => handleInputChange(e.target.value, setArea1, setSuggestions1)}
-        suggestions={suggestions1}
-        onSelect={(value) => {
-          setArea1(value);
-          setSuggestions1([]);
-        }}
-      />
-      <LocationInput
-        label="Drop-off Location"
-        value={area2}
-        onChange={(e) => handleInputChange(e.target.value, setArea2, setSuggestions2)}
-        suggestions={suggestions2}
-        onSelect={(value) => {
-          setArea2(value);
-          setSuggestions2([]);
-        }}
-      />
-      <select value={carType} onChange={(e) => setCarType(e.target.value)}>
-        <option value="sedan">Sedan</option>
-        <option value="suv">SUV</option>
-        <option value="hatchback">Hatchback</option>
-      </select>
-      <button onClick={handleSubmit}>Get Fare Estimate</button>
+    <div className="app-container">
+      <h1 className="title">Taxi Fare Estimator</h1>
+      <div className="form-container">
+        <LocationInput
+          label="Pickup Location"
+          value={area1}
+          onChange={(e) => handleInputChange(e.target.value, setArea1, setSuggestions1)}
+          suggestions={suggestions1}
+          onSelect={(value) => {
+            setArea1(value);
+            setSuggestions1([]);
+          }}
+        />
+        <LocationInput
+          label="Drop-off Location"
+          value={area2}
+          onChange={(e) => handleInputChange(e.target.value, setArea2, setSuggestions2)}
+          suggestions={suggestions2}
+          onSelect={(value) => {
+            setArea2(value);
+            setSuggestions2([]);
+          }}
+        />
+        <select className="car-select" value={carType} onChange={(e) => setCarType(e.target.value)}>
+          <option value="sedan">Sedan</option>
+          <option value="suv">SUV</option>
+          <option value="hatchback">Hatchback</option>
+        </select>
+        <button className="submit-btn" onClick={handleSubmit}>Get Fare Estimate</button>
+      </div>
       {result && (
-        <div className="result">
+        <div className="result-box">
           <p>Distance: {result.distance_km} km</p>
           <p>Estimated Fare: ₹{result.estimated_fare}</p>
         </div>
